@@ -872,6 +872,14 @@ interface ComposerPromptEditorProps {
   skills: ReadonlyArray<ServerProviderSkill>;
   disabled: boolean;
   placeholder: string;
+  ariaLabel?: string | undefined;
+  /**
+   * Suggestion-menu wiring for screen readers. `suggestionListId` marks an
+   * editor that can open a suggestion list at all, so editors without menus
+   * (the Settings font preview) are not announced as having autocomplete.
+   * `activeSuggestionId` is the highlighted option while that list is
+   * rendered; it drives aria-activedescendant and aria-controls.
+   */
   suggestionListId?: string | undefined;
   activeSuggestionId?: string | undefined;
   containerClassName?: string;
@@ -1635,6 +1643,7 @@ function ComposerPromptEditorInner({
   skills,
   disabled,
   placeholder,
+  ariaLabel,
   suggestionListId,
   activeSuggestionId,
   containerClassName,
@@ -1995,12 +2004,12 @@ function ComposerPromptEditorInner({
                   className,
                 )}
                 data-testid="composer-editor"
-                ariaLabel="Message"
+                ariaLabel={ariaLabel}
                 ariaMultiline={true}
-                ariaAutoComplete="list"
-                ariaControls={suggestionListId}
+                ariaAutoComplete={suggestionListId ? "list" : undefined}
+                ariaControls={activeSuggestionId ? suggestionListId : undefined}
                 ariaActiveDescendant={activeSuggestionId}
-                aria-haspopup="listbox"
+                aria-haspopup={suggestionListId ? "listbox" : undefined}
                 aria-placeholder={placeholder}
                 placeholder={<span />}
                 onKeyDown={(event) => {
@@ -2088,6 +2097,7 @@ export function ComposerPromptEditor({
   skills,
   disabled,
   placeholder,
+  ariaLabel,
   suggestionListId,
   activeSuggestionId,
   containerClassName,
@@ -2137,6 +2147,7 @@ export function ComposerPromptEditor({
           skills={skills}
           disabled={disabled}
           placeholder={placeholder}
+          ariaLabel={ariaLabel}
           suggestionListId={suggestionListId}
           activeSuggestionId={activeSuggestionId}
           {...(containerClassName ? { containerClassName } : {})}

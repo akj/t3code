@@ -107,7 +107,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
         {props.items.length > 0 ? (
           <CommandList
             id={props.listId}
-            aria-label="Composer suggestions"
+            aria-label={props.triggerKind ? LISTBOX_LABEL_BY_TRIGGER[props.triggerKind] : undefined}
             className="max-h-72 min-h-0 scroll-pb-6"
           >
             <CommandGroup>
@@ -226,6 +226,13 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
 export function composerSuggestionOptionId(listId: string, itemId: string): string {
   return `${listId}-${encodeURIComponent(itemId)}`;
 }
+
+const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
+  path: "Files and folders",
+  "pull-request": "Pull requests",
+  "slash-command": "Commands",
+  skill: "Skills",
+};
 
 const SKILL_SOURCE_ICON_BY_KIND: Record<ProviderSkillSourceKind, LucideIcon> = {
   app: BlocksIcon,
