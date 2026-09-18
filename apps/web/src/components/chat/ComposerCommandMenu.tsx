@@ -224,7 +224,8 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
 });
 
 export function composerSuggestionOptionId(listId: string, itemId: string): string {
-  return `${listId}-${encodeURIComponent(itemId)}`;
+  // JSON escapes lone UTF-16 surrogates before URI encoding without losing identity.
+  return `${listId}-${encodeURIComponent(JSON.stringify(itemId))}`;
 }
 
 const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
