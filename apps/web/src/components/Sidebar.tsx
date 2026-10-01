@@ -173,6 +173,7 @@ import {
   resolveAdjacentThreadId,
   resolveSidebarDropTarget,
   resolveSidebarDropVerb,
+  resolveSidebarRowAccessibleName,
   type SidebarDropVerb,
   resolveSidebarThreadStatus,
   searchSidebarThreads,
@@ -535,10 +536,13 @@ function SortableThreadRow(props: {
 const draftSurfaceClassName = "bg-warning/4 hover:bg-warning/8";
 const draftPenClassName = "size-3 shrink-0 text-warning-foreground";
 
-// The row's one control for opening it, named by the row's title. It fills
-// the row behind the visible content, which gives screen reader cursors and
-// voice control a row-sized target, and its activation bubbles to the row
-// surface's click handler like any other click on the row. Secondary actions
+// The row's one control for opening it, named "title, status, project" so
+// tabbing between rows tells same-titled threads apart. The visible title and
+// project text are aria-hidden so browse mode does not read them twice; visible
+// status labels stay exposed because they are live regions. It fills the row
+// behind the visible content, which gives screen reader cursors and voice
+// control a row-sized target, and its activation bubbles to the row surface's
+// click handler like any other click on the row. Secondary actions
 // must stay its siblings, never its children: WebKit drops everything inside a
 // button from the accessibility tree, and NVDA's browse mode hides the
 // contents of a named button. The row surface needs `isolate` so the negative
@@ -786,14 +790,24 @@ const SidebarDraftRow = memo(function SidebarDraftRow(props: {
         onMouseDown={focusSidebarRowPrimaryAction}
         onClick={handleActivate}
       >
-        <SidebarRowPrimaryAction name={`${preview}, Unsent draft`} isActive={props.isActive} />
+        <SidebarRowPrimaryAction
+          name={resolveSidebarRowAccessibleName({
+            title: preview,
+            statusLabel: "Unsent draft",
+            projectDisplayName: props.projectDisplayName,
+          })}
+          isActive={props.isActive}
+        />
         <div className="relative z-10 h-[4.875rem] px-(--sidebar-row-content-inset) py-(--sidebar-content-inset)">
           <div className="flex h-5 min-w-0 items-center gap-1.5">
             <SquarePenIcon aria-hidden className={draftPenClassName} />
             {props.project ? (
               <ProjectFavicon project={props.project} className="size-4 shrink-0" />
             ) : null}
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-secondary-label">
+            <span
+              aria-hidden
+              className="min-w-0 flex-1 truncate text-xs font-medium text-secondary-label"
+            >
               {props.projectDisplayName}
             </span>
             <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-end">
@@ -1512,7 +1526,11 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
   );
   const primaryAction = (
     <SidebarRowPrimaryAction
-      name={thread.title}
+      name={resolveSidebarRowAccessibleName({
+        title: thread.title,
+        statusLabel: topStatus?.label ?? null,
+        projectDisplayName: props.projectDisplayName,
+      })}
       isActive={props.isActive}
       isBusy={isRegeneratingTitle}
     />
@@ -1786,6 +1804,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: {
               ) : null}
               {props.projectDisplayName ? (
                 <span
+                  aria-hidden
                   className={cn(
                     "min-w-0 flex-1 truncate text-secondary-label text-xs",
                     shouldRecede ? "font-normal" : "font-medium",
@@ -2107,11 +2126,11 @@ const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props: {
               tabIndex={-1}
               aria-selected={props.isHighlighted}
               aria-current={props.isRouteActive ? "page" : undefined}
-              aria-label={
-                props.projectDisplayName
-                  ? `${thread.title}, ${props.projectDisplayName}`
-                  : thread.title
-              }
+              aria-label={resolveSidebarRowAccessibleName({
+                title: thread.title,
+                statusLabel: null,
+                projectDisplayName: props.projectDisplayName,
+              })}
               onMouseMove={props.onHighlight}
               onClick={props.onSelect}
               className={cn(
