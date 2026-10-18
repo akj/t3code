@@ -90,11 +90,10 @@ vi.mock(import("../hooks/useLocalStorage"), async (original) => ({
 }));
 vi.mock(import("../localApi"), async (original) => ({
   ...(await original()),
-  readLocalApi: () =>
-    ({
-      contextMenu: { show: state.choose },
-      shell: { openExternal: state.openExternal },
-    }) as never,
+  readLocalApi: () => ({ shell: { openExternal: state.openExternal } }) as never,
+}));
+vi.mock(import("./chat/useMessageLinkMenu"), () => ({
+  useMessageLinkMenu: () => ({ show: state.choose, menu: null }) as never,
 }));
 vi.mock(import("~/lib/openPullRequestLink"), async (original) => ({
   ...(await original()),
@@ -202,7 +201,7 @@ it("removes host actions after revocation while keeping file preview and copying
   expect(state.openEditor).not.toHaveBeenCalled();
 });
 
-it("does not launch an editor after revocation during a native context menu", async () => {
+it("does not launch an editor after revocation while its link menu is open", async () => {
   let choose: (action: string) => void = () => {
     throw new Error("Menu not opened");
   };
@@ -258,7 +257,7 @@ it.each([false, true])(
 );
 
 it.each(["link-to-thread", "unlink-from-thread"])(
-  "rechecks %s after a native context menu returns",
+  "rechecks %s after its link menu returns",
   async (action) => {
     state.linkedPullRequest = action === "unlink-from-thread" ? linkedPullRequest : null;
     let choose: (action: string) => void = () => {

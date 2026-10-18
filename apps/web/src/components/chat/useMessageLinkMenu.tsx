@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Menu, MenuItem, MenuPopup } from "../ui/menu";
 
@@ -44,39 +44,36 @@ export function useMessageLinkMenu() {
   const pending = useRef<((value: string | null) => void) | null>(null);
   // Set when Tab already moved focus past the link, so closing must not pull it back.
   const tabbedPast = useRef(false);
-  const complete = useCallback((value: string | null) => {
+  const complete = (value: string | null) => {
     const resolve = pending.current;
     pending.current = null;
     setState(null);
     resolve?.(value);
-  }, []);
+  };
 
-  useEffect(() => () => pending.current?.(null), []);
+  useEffect(() => () => pending.current?.(null), [pending]);
 
-  const show = useCallback(
-    <T extends string>(
-      items: readonly { id: T; label: string }[],
-      position: { x: number; y: number },
-      trigger: HTMLElement,
-    ): Promise<T | null> => {
-      pending.current?.(null);
-      pending.current = null;
-      if (items.length === 0) {
-        setState(null);
-        return Promise.resolve(null);
-      }
-      if (position.x === 0 && position.y === 0) {
-        const bounds = trigger.getBoundingClientRect();
-        position = { x: bounds.left, y: bounds.bottom };
-      }
-      return new Promise((resolve) => {
-        tabbedPast.current = false;
-        pending.current = (value) => resolve(value as T | null);
-        setState({ items, position, trigger });
-      });
-    },
-    [],
-  );
+  const show = <T extends string>(
+    items: readonly { id: T; label: string }[],
+    position: { x: number; y: number },
+    trigger: HTMLElement,
+  ): Promise<T | null> => {
+    pending.current?.(null);
+    pending.current = null;
+    if (items.length === 0) {
+      setState(null);
+      return Promise.resolve(null);
+    }
+    if (position.x === 0 && position.y === 0) {
+      const bounds = trigger.getBoundingClientRect();
+      position = { x: bounds.left, y: bounds.bottom };
+    }
+    return new Promise((resolve) => {
+      tabbedPast.current = false;
+      pending.current = (value) => resolve(value as T | null);
+      setState({ items, position, trigger });
+    });
+  };
 
   const menu = state && (
     <Menu

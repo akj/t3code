@@ -1,62 +1,74 @@
-// @vitest-environment jsdom
-
-import { act, createRef, useImperativeHandle } from "react";
+import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { useMessageLinkMenu } from "./useMessageLinkMenu";
 
-let renderer: ReactTestRenderer | undefined;
-
-afterEach(async () => {
-  await act(() => renderer?.unmount());
-  renderer = undefined;
-  vi.unstubAllGlobals();
-});
-
 describe("message link menu positioning", () => {
+  let root: Root;
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    container = document.body.appendChild(document.createElement("div"));
+    root = createRoot(container);
+  });
+
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+  });
+
   it.each([
     { position: { x: 0, y: 0 }, expected: { x: 120, y: 260 } },
     { position: { x: 145, y: 245 }, expected: { x: 145, y: 245 } },
     { position: { x: 0, y: 245 }, expected: { x: 0, y: 245 } },
     { position: { x: 145, y: 0 }, expected: { x: 145, y: 0 } },
-  ])("anchors a menu opened at $position to $expected", async ({ position, expected }) => {
-    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-    vi.stubGlobal(
-      "DOMRect",
-      class {
-        constructor(
-          readonly x: number,
-          readonly y: number,
-          readonly width: number,
-          readonly height: number,
-        ) {}
-      },
-    );
-    const linkMenuRef = createRef<ReturnType<typeof useMessageLinkMenu>>();
+  ])("opens a menu requested at $position at $expected", async ({ position, expected }) => {
     function TestLinkMenu() {
-      const linkMenu = useMessageLinkMenu();
-      useImperativeHandle(linkMenuRef, () => linkMenu, [linkMenu]);
-      return null;
+      const { show, menu } = useMessageLinkMenu();
+      return (
+        <>
+          <a
+            href="https://example.com"
+            style={{ position: "fixed", left: 120, top: 240, width: 80, height: 20 }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              void show(
+                [{ id: "copy-link", label: "Copy Link" }],
+                { x: event.clientX, y: event.clientY },
+                event.currentTarget,
+              );
+            }}
+          >
+            Example
+          </a>
+          {menu}
+        </>
+      );
     }
-    const trigger = {
-      getBoundingClientRect: () => ({ left: 120, bottom: 260 }),
-    } as HTMLElement;
+    await act(async () => root.render(<TestLinkMenu />));
 
-    await act(() => {
-      renderer = create(<TestLinkMenu />);
-    });
-    await act(() => {
-      void linkMenuRef.current!.show([{ id: "copy-link", label: "Copy Link" }], position, trigger);
+    // A keyboard-opened context menu reports (0, 0).
+    await act(async () => {
+      container.querySelector("a")!.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: position.x,
+          clientY: position.y,
+        }),
+      );
     });
 
-    // Evaluate the virtual anchor consumed by the popup's positioning engine.
-    const popup = linkMenuRef.current!.menu?.props.children;
-    expect(popup.props.anchor.getBoundingClientRect()).toMatchObject({
-      ...expected,
-      width: 0,
-      height: 0,
+    // Base UI nudges the popup up to 5px off its anchor; the cases differ by far more.
+    await vi.waitFor(() => {
+      const menu = document.querySelector<HTMLElement>('[role="menu"]');
+      expect(menu).not.toBeNull();
+      const bounds = menu!.getBoundingClientRect();
+      expect(Math.abs(bounds.left - expected.x)).toBeLessThanOrEqual(5);
+      expect(Math.abs(bounds.top - expected.y)).toBeLessThanOrEqual(5);
     });
   });
 });
